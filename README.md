@@ -3,7 +3,7 @@ A web app for testing opencv's ArUco functions + pre-compiled `opencv.js` that s
 
 ## Building 
 As the official pre-compiled `opencv.js` doesn't contain the ArUco functions, to use them, we need to build it ourselves.
-The `opencv.js` in the `src` folder are built with the following command (copied from [here](https://github.com/opencv/opencv/issues/15913#issuecomment-756654306)), and the version is `4.12.0 (dev)`:
+The `opencv.js` in the `js` folder are built with the following command (copied from [here](https://github.com/opencv/opencv/issues/15913#issuecomment-756654306)), and the version is `4.12.0 (dev)`:
 
 ```
 mkdir opencv_js_build
