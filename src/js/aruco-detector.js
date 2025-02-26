@@ -160,41 +160,61 @@ function overlayImageOnMarker(src, corners, markerIndex) {
     // Get marker corners
     let markerCorners = corners.get(markerIndex);
     
-    // Calculate source points based on anchor point
-    let srcTri = new cv.Mat(4, 1, cv.CV_32FC2);
-    let dstTri = new cv.Mat(4, 1, cv.CV_32FC2);
-    
     // Set destination points (marker corners)
-    dstTri.data32F[0] = markerCorners.data32F[0]; // Top-left x
-    dstTri.data32F[1] = markerCorners.data32F[1]; // Top-left y
-    dstTri.data32F[2] = markerCorners.data32F[2]; // Top-right x
-    dstTri.data32F[3] = markerCorners.data32F[3]; // Top-right y
-    dstTri.data32F[4] = markerCorners.data32F[4]; // Bottom-right x
-    dstTri.data32F[5] = markerCorners.data32F[5]; // Bottom-right y
-    dstTri.data32F[6] = markerCorners.data32F[6]; // Bottom-left x
-    dstTri.data32F[7] = markerCorners.data32F[7]; // Bottom-left y
+    let dstPoints = [];
+    for (let i = 0; i < 4; i++) {
+        dstPoints.push(markerCorners.data32F[i * 2]); // x
+        dstPoints.push(markerCorners.data32F[i * 2 + 1]); // y
+    }
+    let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, dstPoints);
     
-    // Set source points based on overlay image size and anchor point
+    // Calculate source points based on overlay image size and anchor point
     const width = overlayImage.cols * imageScale;
     const height = overlayImage.rows * imageScale;
     
+    let srcPoints;
     switch(anchorPoint) {
         case 'top-left':
-            srcTri.data32F = [0,0, width,0, width,height, 0,height];
+            srcPoints = [
+                0, 0,           // Top-left
+                width, 0,       // Top-right
+                width, height,  // Bottom-right
+                0, height       // Bottom-left
+            ];
             break;
         case 'top-right':
-            srcTri.data32F = [-width,0, 0,0, 0,height, -width,height];
+            srcPoints = [
+                -width, 0,      // Top-left
+                0, 0,           // Top-right
+                0, height,      // Bottom-right
+                -width, height  // Bottom-left
+            ];
             break;
         case 'bottom-left':
-            srcTri.data32F = [0,-height, width,-height, width,0, 0,0];
+            srcPoints = [
+                0, -height,     // Top-left
+                width, -height, // Top-right
+                width, 0,       // Bottom-right
+                0, 0           // Bottom-left
+            ];
             break;
         case 'bottom-right':
-            srcTri.data32F = [-width,-height, 0,-height, 0,0, -width,0];
+            srcPoints = [
+                -width, -height, // Top-left
+                0, -height,      // Top-right
+                0, 0,           // Bottom-right
+                -width, 0       // Bottom-left
+            ];
             break;
         default: // center
-            srcTri.data32F = [-width/2,-height/2, width/2,-height/2, 
-                             width/2,height/2, -width/2,height/2];
+            srcPoints = [
+                -width/2, -height/2,  // Top-left
+                width/2, -height/2,   // Top-right
+                width/2, height/2,    // Bottom-right
+                -width/2, height/2    // Bottom-left
+            ];
     }
+    let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, srcPoints);
     
     let M = cv.getPerspectiveTransform(srcTri, dstTri);
     
