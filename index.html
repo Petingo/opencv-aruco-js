@@ -118,8 +118,6 @@
         </div>
     </div>
 
-    <h2 id="checker" style="color: green;">OpenCV is loading...</h2>
-
     <script async src="src/js/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
     <script type="text/javascript">
         async function onOpenCvReady() {
@@ -129,7 +127,6 @@
                 window.cv = cvInstance;
 
                 // now cv is ready to be used
-                document.getElementById('checker').innerHTML = 'OpenCV.js is ready.';
                 initializeCamera();
                 initializeControls();
             });
