@@ -3,8 +3,6 @@ let stream = null;
 let detector = null;
 let overlayImage = null;
 let overlayImageElement = null;
-let cameraMatrix;
-let distCoeffs;
 
 // Parameters for AR overlay
 let targetMarkerId = 0;
@@ -17,18 +15,6 @@ async function initializeCamera() {
         video = document.getElementById('videoInput');
         video.srcObject = stream;
         video.play();
-
-        // Camera calibration parameters
-        // const mat = cv.matFromArray(img_array.length, img_array[0].length, cv.CV_8UC1, [].concat(...img_array));
-        
-        // let cameraMatrixData = 
-        cameraMatrix = cv.matFromArray(3, 3, cv.CV_64F, [
-            1000, 0, video.width/2,
-            0, 1000, video.height/2,
-            0, 0, 1
-        ]);
-
-        distCoeffs = cv.matFromArray(1, 5, cv.CV_64F, [0, 0, 0, 0, 0]);
         
         video.onloadedmetadata = () => {
             initializeDetector();
@@ -116,27 +102,47 @@ function processVideo() {
             
             // Draw detected markers
             if (ids.rows > 0) {
-                cv.aruco_drawDetectedMarkers(src, corners, ids);
-                document.getElementById('detectedIds').textContent = 
-                    'Detected markers: ' + Array.from(ids.data32S);
-                
-                // Draw 3D axes for each marker
-                let rvecs = new cv.Mat();
-                let tvecs = new cv.Mat();
-                cv.aruco_estimatePoseSingleMarkers(corners, 0.05, cameraMatrix, distCoeffs, rvecs, tvecs);
-                
-                for(let i = 0; i < ids.rows; i++) {
-                    cv.aruco_drawAxis(src, cameraMatrix, distCoeffs, 
-                              rvecs.row(i), tvecs.row(i), 0.1);
+                // Draw markers manually
+                for (let i = 0; i < corners.size(); i++) {
+                    let corner = corners.get(i);
+                    let color = new cv.Scalar(0, 255, 0, 255); // Green color
                     
+                    // Draw the marker border
+                    for (let j = 0; j < 4; j++) {
+                        let p1 = new cv.Point(
+                            corner.data32F[j * 2],
+                            corner.data32F[j * 2 + 1]
+                        );
+                        let p2 = new cv.Point(
+                            corner.data32F[((j + 1) % 4) * 2],
+                            corner.data32F[((j + 1) % 4) * 2 + 1]
+                        );
+                        cv.line(src, p1, p2, color, 2);
+                    }
+                    
+                    // Draw marker ID
+                    let center = new cv.Point(
+                        (corner.data32F[0] + corner.data32F[2] + corner.data32F[4] + corner.data32F[6]) / 4,
+                        (corner.data32F[1] + corner.data32F[3] + corner.data32F[5] + corner.data32F[7]) / 4
+                    );
+                    cv.putText(
+                        src,
+                        ids.data32S[i].toString(),
+                        center,
+                        cv.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        color,
+                        2
+                    );
+
                     // Overlay image if marker ID matches
                     if (overlayImage && ids.data32S[i] === targetMarkerId) {
                         overlayImageOnMarker(src, corners, i);
                     }
                 }
                 
-                rvecs.delete();
-                tvecs.delete();
+                document.getElementById('detectedIds').textContent = 
+                    'Detected markers: ' + Array.from(ids.data32S);
             }
             
             cv.imshow('canvasOutput', src);
