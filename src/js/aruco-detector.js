@@ -171,8 +171,9 @@ function overlayImageOnMarker(dst, corners, markerIndex) {
     let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, dstPoints);
     
     // Calculate source points based on overlay image size and anchor point
-    const width = overlayImage.cols * imageScale;
-    const height = overlayImage.rows * imageScale;
+    const scale = 1 / imageScale;  // Invert scale
+    const width = overlayImage.cols * scale;
+    const height = overlayImage.rows * scale;
     
     let srcPoints;
     switch(anchorPoint) {
