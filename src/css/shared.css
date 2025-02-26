@@ -11,16 +11,29 @@
 }
 
 .control-item label {
-    display: block;
-    margin-bottom: 5px;
+    display: inline-block;
+    margin-right: 10px;
+    min-width: 180px;
 }
 
-.control-item input,
+.control-item input:not([type="checkbox"]),
 .control-item select {
-    width: 100%;
+    width: calc(100% - 20px);
     padding: 5px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    display: block;
+    margin-right: 20px;
+}
+
+.control-item:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.control-item:has(input[type="checkbox"]) label {
+    flex: 1;
 }
 
 .container {

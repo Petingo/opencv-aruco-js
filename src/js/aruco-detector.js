@@ -9,6 +9,9 @@ let targetMarkerId = 0;
 let imageScale = 1.0;
 let anchorPoint = 'center';
 
+// Add new variable
+let overlayEnabled = false;
+
 async function initializeCamera() {
     try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -26,6 +29,18 @@ async function initializeCamera() {
 }
 
 function initializeControls() {
+    // Load default cat image
+    overlayImageElement = new Image();
+    overlayImageElement.onload = () => {
+        overlayImage = cv.imread(overlayImageElement);
+    };
+    overlayImageElement.src = 'assets/cat_ar.png';
+
+    // Add toggle control
+    document.getElementById('overlayEnabled').addEventListener('change', (e) => {
+        overlayEnabled = e.target.checked;
+    });
+
     document.getElementById('dictionary').addEventListener('change', initializeDetector);
     document.getElementById('adaptiveThreshConstant').addEventListener('change', initializeDetector);
     document.getElementById('minMarkerPerimeterRate').addEventListener('change', initializeDetector);
@@ -75,11 +90,19 @@ function getDictionary() {
 
 function handleImageUpload(e) {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+        // If file selection is cancelled, revert to cat image
+        overlayImageElement.src = 'assets/cat_ar.png';
+        return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
         overlayImageElement = new Image();
+        overlayImageElement.onerror = () => {
+            // If image loading fails, revert to cat image
+            overlayImageElement.src = 'assets/cat_ar.png';
+        };
         overlayImageElement.onload = () => {
             overlayImage = cv.imread(overlayImageElement);
         };
@@ -137,9 +160,9 @@ function processVideo() {
                         2
                     );
 
-                    // Overlay image if marker ID matches
-                    if (overlayImage && ids.data32S[i] === targetMarkerId) {
-                        overlayImageOnMarker(dst, corners, i);  // Pass dst instead of src
+                    // Only overlay if enabled
+                    if (overlayEnabled && overlayImage && ids.data32S[i] === targetMarkerId) {
+                        overlayImageOnMarker(dst, corners, i);
                     }
                 }
                 
