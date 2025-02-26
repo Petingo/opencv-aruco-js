@@ -93,11 +93,13 @@ function processVideo() {
     let cap = new cv.VideoCapture(video);
     let corners = new cv.MatVector();
     let ids = new cv.Mat();
+    let dst = new cv.Mat();  // Add output matrix
     
     const FPS = 30;
     function process() {
         try {
             cap.read(src);
+            src.copyTo(dst);  // Make a copy of the source frame
             detector.detectMarkers(src, corners, ids);
             
             // Draw detected markers
@@ -117,7 +119,7 @@ function processVideo() {
                             corner.data32F[((j + 1) % 4) * 2],
                             corner.data32F[((j + 1) % 4) * 2 + 1]
                         );
-                        cv.line(src, p1, p2, color, 2);
+                        cv.line(dst, p1, p2, color, 2);  // Draw on dst instead of src
                     }
                     
                     // Draw marker ID
@@ -126,7 +128,7 @@ function processVideo() {
                         (corner.data32F[1] + corner.data32F[3] + corner.data32F[5] + corner.data32F[7]) / 4
                     );
                     cv.putText(
-                        src,
+                        dst,  // Draw on dst instead of src
                         ids.data32S[i].toString(),
                         center,
                         cv.FONT_HERSHEY_SIMPLEX,
@@ -137,7 +139,7 @@ function processVideo() {
 
                     // Overlay image if marker ID matches
                     if (overlayImage && ids.data32S[i] === targetMarkerId) {
-                        overlayImageOnMarker(src, corners, i);
+                        overlayImageOnMarker(dst, corners, i);  // Pass dst instead of src
                     }
                 }
                 
@@ -145,7 +147,7 @@ function processVideo() {
                     'Detected markers: ' + Array.from(ids.data32S);
             }
             
-            cv.imshow('canvasOutput', src);
+            cv.imshow('canvasOutput', dst);  // Show dst instead of src
             
             requestAnimationFrame(process);
         } catch (err) {
@@ -156,7 +158,7 @@ function processVideo() {
     process();
 }
 
-function overlayImageOnMarker(src, corners, markerIndex) {
+function overlayImageOnMarker(dst, corners, markerIndex) {
     // Get marker corners
     let markerCorners = corners.get(markerIndex);
     
@@ -221,68 +223,27 @@ function overlayImageOnMarker(src, corners, markerIndex) {
     
     // Create a warped version of the overlay image
     let overlayWarped = new cv.Mat();
-    let dsize = new cv.Size(src.cols, src.rows);
+    let dsize = new cv.Size(dst.cols, dst.rows);
     cv.warpPerspective(overlayImage, overlayWarped, M, dsize, 
-                      cv.INTER_LINEAR, cv.BORDER_TRANSPARENT);
+                      cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar(0,0,0,0));
     
-    // Split the warped overlay into channels
-    let channels = new cv.MatVector();
-    cv.split(overlayWarped, channels);
+    // Create a mask from the alpha channel
+    let mask = new cv.Mat();
+    let maskChannels = new cv.MatVector();
+    cv.split(overlayWarped, maskChannels);
+    mask = maskChannels.get(3);
     
-    // Use the alpha channel as a mask
-    let mask = channels.get(3);
-    let mask32f = new cv.Mat();
-    mask.convertTo(mask32f, cv.CV_32F, 1.0/255.0);
-    
-    // Create inverse mask for the original image
-    let ones = new cv.Mat(mask32f.rows, mask32f.cols, cv.CV_32F, new cv.Scalar(1.0));
-    let inverseMask = new cv.Mat();
-    cv.subtract(ones, mask32f, inverseMask);
-    
-    // Split source image
-    let srcChannels = new cv.MatVector();
-    cv.split(src, srcChannels);
-    
-    // Blend each channel
-    for (let i = 0; i < 3; i++) {
-        let srcChannel = new cv.Mat();
-        let overlayChannel = new cv.Mat();
-        let resultChannel = new cv.Mat();
-        
-        srcChannels.get(i).convertTo(srcChannel, cv.CV_32F, 1.0/255.0);
-        channels.get(i).convertTo(overlayChannel, cv.CV_32F, 1.0/255.0);
-        
-        // Blend: result = overlay * alpha + src * (1 - alpha)
-        cv.multiply(overlayChannel, mask32f, overlayChannel);
-        cv.multiply(srcChannel, inverseMask, srcChannel);
-        cv.add(overlayChannel, srcChannel, resultChannel);
-        
-        // Convert back to 8U
-        resultChannel.convertTo(srcChannels.get(i), cv.CV_8U, 255.0);
-        
-        srcChannel.delete();
-        overlayChannel.delete();
-        resultChannel.delete();
-    }
-    
-    // Merge channels back
-    cv.merge(srcChannels, src);
+    // Apply the overlay where the mask is non-zero
+    overlayWarped.copyTo(dst, mask);
     
     // Cleanup
     srcTri.delete();
     dstTri.delete();
     M.delete();
     overlayWarped.delete();
-    ones.delete();
     mask.delete();
-    mask32f.delete();
-    inverseMask.delete();
-    for (let i = 0; i < channels.size(); i++) {
-        channels.get(i).delete();
+    for (let i = 0; i < maskChannels.size(); i++) {
+        maskChannels.get(i).delete();
     }
-    for (let i = 0; i < srcChannels.size(); i++) {
-        srcChannels.get(i).delete();
-    }
-    channels.delete();
-    srcChannels.delete();
+    maskChannels.delete();
 } 
