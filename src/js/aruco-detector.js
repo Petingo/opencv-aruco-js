@@ -216,20 +216,73 @@ function overlayImageOnMarker(src, corners, markerIndex) {
     }
     let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, srcPoints);
     
+    // Get perspective transform
     let M = cv.getPerspectiveTransform(srcTri, dstTri);
     
-    // Apply perspective transformation
+    // Create a warped version of the overlay image
     let overlayWarped = new cv.Mat();
     let dsize = new cv.Size(src.cols, src.rows);
     cv.warpPerspective(overlayImage, overlayWarped, M, dsize, 
                       cv.INTER_LINEAR, cv.BORDER_TRANSPARENT);
     
-    // Blend images
-    cv.addWeighted(src, 1, overlayWarped, 1, 0, src);
+    // Split the warped overlay into channels
+    let channels = new cv.MatVector();
+    cv.split(overlayWarped, channels);
+    
+    // Use the alpha channel as a mask
+    let mask = channels.get(3);
+    let mask32f = new cv.Mat();
+    mask.convertTo(mask32f, cv.CV_32F, 1.0/255.0);
+    
+    // Create inverse mask for the original image
+    let ones = new cv.Mat(mask32f.rows, mask32f.cols, cv.CV_32F, new cv.Scalar(1.0));
+    let inverseMask = new cv.Mat();
+    cv.subtract(ones, mask32f, inverseMask);
+    
+    // Split source image
+    let srcChannels = new cv.MatVector();
+    cv.split(src, srcChannels);
+    
+    // Blend each channel
+    for (let i = 0; i < 3; i++) {
+        let srcChannel = new cv.Mat();
+        let overlayChannel = new cv.Mat();
+        let resultChannel = new cv.Mat();
+        
+        srcChannels.get(i).convertTo(srcChannel, cv.CV_32F, 1.0/255.0);
+        channels.get(i).convertTo(overlayChannel, cv.CV_32F, 1.0/255.0);
+        
+        // Blend: result = overlay * alpha + src * (1 - alpha)
+        cv.multiply(overlayChannel, mask32f, overlayChannel);
+        cv.multiply(srcChannel, inverseMask, srcChannel);
+        cv.add(overlayChannel, srcChannel, resultChannel);
+        
+        // Convert back to 8U
+        resultChannel.convertTo(srcChannels.get(i), cv.CV_8U, 255.0);
+        
+        srcChannel.delete();
+        overlayChannel.delete();
+        resultChannel.delete();
+    }
+    
+    // Merge channels back
+    cv.merge(srcChannels, src);
     
     // Cleanup
     srcTri.delete();
     dstTri.delete();
     M.delete();
     overlayWarped.delete();
+    ones.delete();
+    mask.delete();
+    mask32f.delete();
+    inverseMask.delete();
+    for (let i = 0; i < channels.size(); i++) {
+        channels.get(i).delete();
+    }
+    for (let i = 0; i < srcChannels.size(); i++) {
+        srcChannels.get(i).delete();
+    }
+    channels.delete();
+    srcChannels.delete();
 } 
