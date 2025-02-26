@@ -1,0 +1,64 @@
+/* Main page styles */
+.container {
+    display: flex;
+    padding: 20px;
+    gap: 20px;
+}
+
+.video-section {
+    flex: 1;
+}
+
+.controls-section {
+    width: 300px;
+}
+
+.control-group {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.control-group h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.control-item {
+    margin-bottom: 10px;
+}
+
+.control-item label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.control-item input,
+.control-item select {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.inputoutput {
+    position: relative;
+}
+
+#canvasOutput {
+    max-width: 100%;
+    border: 1px solid #ddd;
+}
+
+.caption {
+    margin-top: 5px;
+    font-size: 14px;
+    color: #666;
+}
+
+#checker {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+} 

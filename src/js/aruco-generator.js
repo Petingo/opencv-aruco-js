@@ -1,22 +1,6 @@
 let dictionary = null;
 
-async function onOpenCvReady() {
-    // initially cv will be a Promise
-    cv.then((cvInstance) => {
-        // replace cv with the real object
-        window.cv = cvInstance;
-        
-        // now cv is ready to be used
-        console.log('OpenCV.js is ready');
-        initializeControls();
-        dictionary = getDictionary();
-        // Generate markers with default settings when page loads
-        generateMarkers();
-    });
-}
-
 function initializeControls() {
-    // Only add event listeners after OpenCV is loaded
     document.getElementById('generateBtn').addEventListener('click', generateMarkers);
     document.getElementById('downloadBtn').addEventListener('click', downloadImage);
     document.getElementById('printBtn').addEventListener('click', printMarkers);
